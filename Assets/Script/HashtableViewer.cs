@@ -42,13 +42,17 @@ public class HashtableViewer : MonoBehaviour
 
 
 
+
+
     HashtableMode hashTableMode = HashtableMode.simple;
     OpenAddressingMode openAddressingMode = OpenAddressingMode.linear;
 
     List<Image> bucketColorViewer = new();
     List<TextMeshProUGUI> bucketViewers = new();
 
-    SimpleHashTable<int, string> simpleHashtable;
+    SimpleHashTable<int, string> simpleHashtable = new();
+
+    int selectedIndex = -1;
 
     #region DUMMY
     static public int bucketSize = 15;
@@ -143,7 +147,7 @@ public class HashtableViewer : MonoBehaviour
             linkedData.Add(null);
         }
         #endregion
-        simpleHashtable = new();
+        simpleHashtable.Clear();
 
         logText.text += $"\nCleared";
         UpdateUi();
@@ -171,6 +175,13 @@ public class HashtableViewer : MonoBehaviour
             TextMeshProUGUI text = newViewer.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
             bucketColorViewer.Add(colorViewer);
             bucketViewers.Add(text);
+
+            Button btn = newViewer.GetComponent<Button>();
+            int index = i;
+            btn.onClick.AddListener(() =>
+            {
+                Select(index);
+            });
         }
 
         for (int i = 0; i < bucketViewers.Count; i++)
@@ -244,5 +255,46 @@ public class HashtableViewer : MonoBehaviour
 
             }
         }
+    }
+
+
+    public void Select(int i)
+    {
+        ColorBlock newColor;
+        if (selectedIndex != -1)
+        {
+            Button oldBtn = bucketColorViewer[selectedIndex].GetComponent<Button>();
+            newColor = oldBtn.colors;
+            newColor.normalColor = Color.white;
+            newColor.selectedColor = Color.white;
+            oldBtn.colors = newColor;
+        }
+
+        selectedIndex = i;
+        Button btn = bucketColorViewer[selectedIndex].GetComponent<Button>();
+        newColor = btn.colors;
+        newColor.normalColor = Color.yellow;
+        newColor.selectedColor = Color.yellow;
+        btn.colors = newColor;
+    }
+
+    public void OnRemove()
+    {
+        if (selectedIndex == -1)
+            return;
+
+        switch (hashTableMode)
+        {
+            case HashtableMode.simple:
+                var key = simpleHashtable.buckets[selectedIndex].Key;
+                simpleHashtable.Remove(key);
+                break;
+            case HashtableMode.chaining:
+                break;
+            case HashtableMode.openAddressing:
+                break;
+        }
+
+        UpdateUi();
     }
 }
