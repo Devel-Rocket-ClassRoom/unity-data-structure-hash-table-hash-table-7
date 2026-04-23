@@ -28,6 +28,7 @@ public class HashtableViewer : MonoBehaviour
     public TMP_Dropdown openHashtableDropdown;
     public TMP_InputField keyInput;
     public TMP_InputField valueInput;
+    public TextMeshProUGUI logText;
 
     public ScrollRect bucketScrollRect;
     public GameObject bucketUiPrefab;
@@ -102,10 +103,12 @@ public class HashtableViewer : MonoBehaviour
                 try
                 {
                     simpleHashtable[key] = value;
+                    logText.text += $"\n{key}:{value} Added Successfully";
                 }
                 catch(Exception e)
                 {
                     Debug.LogException(e);
+                    logText.text += $"\n{e.Message}";
                 }
                 break;
             case HashtableMode.chaining:
@@ -142,6 +145,7 @@ public class HashtableViewer : MonoBehaviour
         #endregion
         simpleHashtable = new();
 
+        logText.text += $"\nCleared";
         UpdateUi();
     }
 
