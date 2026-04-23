@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.LowLevelPhysics2D;
 using UnityEngine.UI;
 
 public class HashtableViewer : MonoBehaviour
@@ -51,13 +52,12 @@ public class HashtableViewer : MonoBehaviour
     List<TextMeshProUGUI> bucketViewers = new();
 
     SimpleHashTable<int, string> simpleHashtable = new();
-
+    ChainingHashTable<int, string> chainingHashtable = new();
     int selectedIndex = -1;
 
     #region DUMMY
     static public int bucketSize = 15;
     List<KeyValuePair<int, string>> data = new(bucketSize);
-    List<LinkedList<KeyValuePair<int, string>>> linkedData = new(bucketSize);
     #endregion
 
 
@@ -116,13 +116,16 @@ public class HashtableViewer : MonoBehaviour
                 }
                 break;
             case HashtableMode.chaining:
-                #region DUMMY
-                if (linkedData[key % bucketSize] == null)
+                try
                 {
-                    linkedData[key % bucketSize] = new();
+                    chainingHashtable.Add(key, value);
+                    logText.text += $"\n{key}:{value} Added Successfully";
                 }
-                linkedData[key % bucketSize].AddLast(new KeyValuePair<int, string>(key, value));
-                #endregion
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    logText.text += $"\n{e.Message}";
+                }
                 break;
             case HashtableMode.openAddressing:
                 #region DUMMY
@@ -139,15 +142,14 @@ public class HashtableViewer : MonoBehaviour
     {
         #region DUMMY
         data.Clear();
-        linkedData.Clear();
 
         for (int i = 0; i < bucketSize; i++)
         {
             data.Add(new KeyValuePair<int, string>(0, null));
-            linkedData.Add(null);
         }
         #endregion
         simpleHashtable.Clear();
+        chainingHashtable.Clear();
 
         logText.text += $"\nCleared";
         UpdateUi();
@@ -230,25 +232,34 @@ public class HashtableViewer : MonoBehaviour
                         }
                         break;
                     case HashtableMode.chaining:
-                        if (linkedData[i] == null)
+                        if (i < chainingHashtable.buckets.Count)
                         {
-                            bucketColorViewer[i].color = emptyColor;
-                            bucketViewers[i].text = "EMPTY";
+                            if (chainingHashtable.buckets[i] == null)
+                            {
+                                bucketColorViewer[i].color = emptyColor;
+                                bucketViewers[i].text = "EMPTY";
+                            }
+                            else
+                            {
+                                var node = chainingHashtable.buckets[i].First;
+
+                                StringBuilder resultBuilder = new StringBuilder();
+                                while (node != null)
+                                {
+                                    resultBuilder.Append(string.Format(viewerFormat, node.Value.Key, node.Value.Value));
+                                    resultBuilder.Append(chainSeperator);
+                                    node = node.Next;
+                                }
+                                resultBuilder.Remove(resultBuilder.Length - 1, 1);
+
+                                bucketColorViewer[i].color = fullColor;
+                                bucketViewers[i].text = resultBuilder.ToString();
+                            }
                         }
                         else
                         {
-                            var node = linkedData[i].First;
-
-                            StringBuilder resultBuilder = new StringBuilder();
-                            while (node != null)
-                            {
-                                resultBuilder.Append(string.Format(viewerFormat, node.Value.Key, node.Value.Value));
-                                resultBuilder.Append(chainSeperator);
-                            }
-                            resultBuilder.Remove(resultBuilder.Length - 1, 1);
-
-                            bucketColorViewer[i].color = fullColor;
-                            bucketViewers[i].text = resultBuilder.ToString();
+                            bucketColorViewer[i].color = emptyColor;
+                            bucketViewers[i].text = "EMPTY";
                         }
                         break;
                 }
