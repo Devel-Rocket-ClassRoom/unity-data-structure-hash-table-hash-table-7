@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
@@ -46,6 +47,7 @@ public class HashtableViewer : MonoBehaviour
     List<Image> bucketColorViewer = new();
     List<TextMeshProUGUI> bucketViewers = new();
 
+    SimpleHashTable<int, string> simpleHashtable;
 
     #region DUMMY
     static public int bucketSize = 15;
@@ -62,7 +64,7 @@ public class HashtableViewer : MonoBehaviour
     {
         hashTableMode = (HashtableMode)typeDropdown.value;
 
-        if(hashTableMode == HashtableMode.openAddressing)
+        if (hashTableMode == HashtableMode.openAddressing)
         {
             openHashtableDropdown.interactable = true;
             openAddressingMode = (OpenAddressingMode)openHashtableDropdown.value;
@@ -85,7 +87,7 @@ public class HashtableViewer : MonoBehaviour
 
     public void OnRandomAdd()
     {
-        int key = Random.Range(0, int.MaxValue);
+        int key = UnityEngine.Random.Range(0, int.MaxValue);
         string value = "RANDOM VALUE";
 
         Add(key, value);
@@ -93,14 +95,35 @@ public class HashtableViewer : MonoBehaviour
 
     private void Add(int key, string value)
     {
-        #region DUMMY
-        data[key % bucketSize] = new KeyValuePair<int, string>(key, value);
-        if (linkedData[key % bucketSize] == null)
+
+        switch (hashTableMode)
         {
-            linkedData[key % bucketSize] = new();
+            case HashtableMode.simple:
+                try
+                {
+                    simpleHashtable[key] = value;
+                }
+                catch(Exception e)
+                {
+                    Debug.LogException(e);
+                }
+                break;
+            case HashtableMode.chaining:
+                #region DUMMY
+                if (linkedData[key % bucketSize] == null)
+                {
+                    linkedData[key % bucketSize] = new();
+                }
+                linkedData[key % bucketSize].AddLast(new KeyValuePair<int, string>(key, value));
+                #endregion
+                break;
+            case HashtableMode.openAddressing:
+                #region DUMMY
+                data[key % bucketSize] = new KeyValuePair<int, string>(key, value);
+                #endregion
+                break;
         }
-        linkedData[key % bucketSize].AddLast(new KeyValuePair<int, string>(key, value));
-        #endregion
+
 
         UpdateUi();
     }
@@ -110,22 +133,36 @@ public class HashtableViewer : MonoBehaviour
         #region DUMMY
         data.Clear();
         linkedData.Clear();
-        
+
         for (int i = 0; i < bucketSize; i++)
         {
             data.Add(new KeyValuePair<int, string>(0, null));
             linkedData.Add(null);
         }
         #endregion
+        simpleHashtable = new();
 
         UpdateUi();
     }
 
     public void UpdateUi()
     {
+        switch (hashTableMode)
+        {
+            case HashtableMode.simple:
+                bucketSize = simpleHashtable.capacity;
+                break;
+            case HashtableMode.chaining:
+                bucketSize = 15;
+                break;
+            case HashtableMode.openAddressing:
+                bucketSize = 15;
+                break;
+        }
+
         for (int i = bucketViewers.Count; i < bucketSize; i++)
         {
-            GameObject newViewer = GameObject.Instantiate(bucketUiPrefab,bucketScrollRect.content);
+            GameObject newViewer = GameObject.Instantiate(bucketUiPrefab, bucketScrollRect.content);
             Image colorViewer = newViewer.GetComponent<Image>();
             TextMeshProUGUI text = newViewer.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
             bucketColorViewer.Add(colorViewer);
@@ -145,6 +182,26 @@ public class HashtableViewer : MonoBehaviour
                 switch (hashTableMode)
                 {
                     case HashtableMode.simple:
+                        if (i < simpleHashtable.buckets.Count)
+                        {
+                            if (simpleHashtable.buckets[i].Value == null)
+                            {
+                                bucketColorViewer[i].color = emptyColor;
+                                bucketViewers[i].text = "EMPTY";
+                            }
+                            else
+                            {
+                                bucketColorViewer[i].color = fullColor;
+                                bucketViewers[i].text = simpleHashtable.buckets[i].Value;
+                            }
+                        }
+                        else
+                        {
+                            bucketColorViewer[i].color = emptyColor;
+                            bucketViewers[i].text = "EMPTY";
+                        }
+                        break;
+
                     case HashtableMode.openAddressing:
                         if (data[i].Value == null)
                         {
