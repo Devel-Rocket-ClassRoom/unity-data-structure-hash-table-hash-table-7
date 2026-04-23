@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
@@ -27,6 +28,7 @@ public class HashtableViewer : MonoBehaviour
     public TMP_Dropdown openHashtableDropdown;
     public TMP_InputField keyInput;
     public TMP_InputField valueInput;
+    public TextMeshProUGUI logText;
 
     public ScrollRect bucketScrollRect;
     public GameObject bucketUiPrefab;
@@ -40,12 +42,17 @@ public class HashtableViewer : MonoBehaviour
 
 
 
+
+
     HashtableMode hashTableMode = HashtableMode.simple;
     OpenAddressingMode openAddressingMode = OpenAddressingMode.linear;
 
     List<Image> bucketColorViewer = new();
     List<TextMeshProUGUI> bucketViewers = new();
 
+    SimpleHashTable<int, string> simpleHashtable = new();
+
+    int selectedIndex = -1;
 
     #region DUMMY
     static public int bucketSize = 15;
@@ -62,7 +69,7 @@ public class HashtableViewer : MonoBehaviour
     {
         hashTableMode = (HashtableMode)typeDropdown.value;
 
-        if(hashTableMode == HashtableMode.openAddressing)
+        if (hashTableMode == HashtableMode.openAddressing)
         {
             openHashtableDropdown.interactable = true;
             openAddressingMode = (OpenAddressingMode)openHashtableDropdown.value;
@@ -85,7 +92,7 @@ public class HashtableViewer : MonoBehaviour
 
     public void OnRandomAdd()
     {
-        int key = Random.Range(0, int.MaxValue);
+        int key = UnityEngine.Random.Range(0, int.MaxValue);
         string value = "RANDOM VALUE";
 
         Add(key, value);
@@ -93,14 +100,37 @@ public class HashtableViewer : MonoBehaviour
 
     private void Add(int key, string value)
     {
-        #region DUMMY
-        data[key % bucketSize] = new KeyValuePair<int, string>(key, value);
-        if (linkedData[key % bucketSize] == null)
+
+        switch (hashTableMode)
         {
-            linkedData[key % bucketSize] = new();
+            case HashtableMode.simple:
+                try
+                {
+                    simpleHashtable[key] = value;
+                    logText.text += $"\n{key}:{value} Added Successfully";
+                }
+                catch(Exception e)
+                {
+                    Debug.LogException(e);
+                    logText.text += $"\n{e.Message}";
+                }
+                break;
+            case HashtableMode.chaining:
+                #region DUMMY
+                if (linkedData[key % bucketSize] == null)
+                {
+                    linkedData[key % bucketSize] = new();
+                }
+                linkedData[key % bucketSize].AddLast(new KeyValuePair<int, string>(key, value));
+                #endregion
+                break;
+            case HashtableMode.openAddressing:
+                #region DUMMY
+                data[key % bucketSize] = new KeyValuePair<int, string>(key, value);
+                #endregion
+                break;
         }
-        linkedData[key % bucketSize].AddLast(new KeyValuePair<int, string>(key, value));
-        #endregion
+
 
         UpdateUi();
     }
@@ -110,26 +140,48 @@ public class HashtableViewer : MonoBehaviour
         #region DUMMY
         data.Clear();
         linkedData.Clear();
-        
+
         for (int i = 0; i < bucketSize; i++)
         {
             data.Add(new KeyValuePair<int, string>(0, null));
             linkedData.Add(null);
         }
         #endregion
+        simpleHashtable.Clear();
 
+        logText.text += $"\nCleared";
         UpdateUi();
     }
 
     public void UpdateUi()
     {
+        switch (hashTableMode)
+        {
+            case HashtableMode.simple:
+                bucketSize = simpleHashtable.capacity;
+                break;
+            case HashtableMode.chaining:
+                bucketSize = 15;
+                break;
+            case HashtableMode.openAddressing:
+                bucketSize = 15;
+                break;
+        }
+
         for (int i = bucketViewers.Count; i < bucketSize; i++)
         {
-            GameObject newViewer = GameObject.Instantiate(bucketUiPrefab,bucketScrollRect.content);
+            GameObject newViewer = GameObject.Instantiate(bucketUiPrefab, bucketScrollRect.content);
             Image colorViewer = newViewer.GetComponent<Image>();
             TextMeshProUGUI text = newViewer.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
             bucketColorViewer.Add(colorViewer);
             bucketViewers.Add(text);
+
+            Button btn = newViewer.GetComponent<Button>();
+            int index = i;
+            btn.onClick.AddListener(() =>
+            {
+                Select(index);
+            });
         }
 
         for (int i = 0; i < bucketViewers.Count; i++)
@@ -145,6 +197,26 @@ public class HashtableViewer : MonoBehaviour
                 switch (hashTableMode)
                 {
                     case HashtableMode.simple:
+                        if (i < simpleHashtable.buckets.Count)
+                        {
+                            if (simpleHashtable.buckets[i].Value == null)
+                            {
+                                bucketColorViewer[i].color = emptyColor;
+                                bucketViewers[i].text = "EMPTY";
+                            }
+                            else
+                            {
+                                bucketColorViewer[i].color = fullColor;
+                                bucketViewers[i].text = simpleHashtable.buckets[i].Value;
+                            }
+                        }
+                        else
+                        {
+                            bucketColorViewer[i].color = emptyColor;
+                            bucketViewers[i].text = "EMPTY";
+                        }
+                        break;
+
                     case HashtableMode.openAddressing:
                         if (data[i].Value == null)
                         {
@@ -183,5 +255,46 @@ public class HashtableViewer : MonoBehaviour
 
             }
         }
+    }
+
+
+    public void Select(int i)
+    {
+        ColorBlock newColor;
+        if (selectedIndex != -1)
+        {
+            Button oldBtn = bucketColorViewer[selectedIndex].GetComponent<Button>();
+            newColor = oldBtn.colors;
+            newColor.normalColor = Color.white;
+            newColor.selectedColor = Color.white;
+            oldBtn.colors = newColor;
+        }
+
+        selectedIndex = i;
+        Button btn = bucketColorViewer[selectedIndex].GetComponent<Button>();
+        newColor = btn.colors;
+        newColor.normalColor = Color.yellow;
+        newColor.selectedColor = Color.yellow;
+        btn.colors = newColor;
+    }
+
+    public void OnRemove()
+    {
+        if (selectedIndex == -1)
+            return;
+
+        switch (hashTableMode)
+        {
+            case HashtableMode.simple:
+                var key = simpleHashtable.buckets[selectedIndex].Key;
+                simpleHashtable.Remove(key);
+                break;
+            case HashtableMode.chaining:
+                break;
+            case HashtableMode.openAddressing:
+                break;
+        }
+
+        UpdateUi();
     }
 }

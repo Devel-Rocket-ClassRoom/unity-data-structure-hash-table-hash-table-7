@@ -9,7 +9,7 @@ public class SimpleHashTable<TKey, TValue> : IDictionary<TKey, TValue>
     public List<KeyValuePair<TKey, TValue>> buckets;
     private List<bool> occupied;
     private int count;
-    private int capacity;
+    public int capacity;
     private float loadFactor = 0.75f;
     public SimpleHashTable(int capacity = 16)
     {
