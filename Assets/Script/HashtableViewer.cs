@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -37,6 +36,7 @@ public class HashtableViewer : MonoBehaviour
     [Header("Config")]
     public Color emptyColor = Color.white;
     public Color fullColor = Color.green;
+    public Color tombStoneColor = Color.red;
 
     public string viewerFormat = "{0} : {1}";
     public string chainSeperator = "->";
@@ -149,7 +149,7 @@ public class HashtableViewer : MonoBehaviour
                     simpleHashtable[key] = value;
                     logText.text += $"\n{key}:{value} Added Successfully";
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Debug.LogException(e);
                     logText.text += $"\n{e.Message}";
@@ -277,13 +277,13 @@ public class HashtableViewer : MonoBehaviour
                             else
                             {
                                 bucketColorViewer[i].color = fullColor;
-                                bucketViewers[i].text = $"I:{i} {string.Format(viewerFormat,simpleHashtable.buckets[i].Key, simpleHashtable.buckets[i].Value)}";
+                                bucketViewers[i].text = $"I:{i} {string.Format(viewerFormat, simpleHashtable.buckets[i].Key, simpleHashtable.buckets[i].Value)}";
                             }
                         }
                         else
                         {
                             bucketColorViewer[i].color = emptyColor;
-                            bucketViewers[i].text = "EMPTY";
+                            bucketViewers[i].text = $"I:{i} EMPTY";
                         }
                         break;
 
@@ -293,10 +293,15 @@ public class HashtableViewer : MonoBehaviour
                             case OpenAddressingMode.linear:
                                 if (i < openHashTableLinear.buckets.Count)
                                 {
-                                    if(openHashTableLinear.buckets[i].Value == null || openHashTableLinear.deleted[i])
+                                    if (openHashTableLinear.deleted[i])
+                                    {
+                                        bucketColorViewer[i].color = tombStoneColor;
+                                        bucketViewers[i].text = $"I:{i} EMPTY with Tombstone";
+                                    }
+                                    else if (openHashTableLinear.buckets[i].Value == null)
                                     {
                                         bucketColorViewer[i].color = emptyColor;
-                                        bucketViewers[i].text = "EMPTY";
+                                        bucketViewers[i].text = $"I:{i} EMPTY";
                                     }
                                     else
                                     {
@@ -307,16 +312,21 @@ public class HashtableViewer : MonoBehaviour
                                 else
                                 {
                                     bucketColorViewer[i].color = emptyColor;
-                                    bucketViewers[i].text = "EMPTY";
+                                    bucketViewers[i].text = $"I:{i} EMPTY";
                                 }
                                 break;
                             case OpenAddressingMode.quadratic:
                                 if (i < openHashTableQuadratic.buckets.Count)
                                 {
-                                    if (openHashTableQuadratic.buckets[i].Value == null || openHashTableQuadratic.deleted[i])
+                                    if (openHashTableQuadratic.deleted[i])
+                                    {
+                                        bucketColorViewer[i].color = tombStoneColor;
+                                        bucketViewers[i].text = $"I:{i} EMPTY with Tombstone";
+                                    }
+                                    else if (openHashTableQuadratic.buckets[i].Value == null)
                                     {
                                         bucketColorViewer[i].color = emptyColor;
-                                        bucketViewers[i].text = "EMPTY";
+                                        bucketViewers[i].text = $"I:{i} EMPTY";
                                     }
                                     else
                                     {
@@ -327,16 +337,21 @@ public class HashtableViewer : MonoBehaviour
                                 else
                                 {
                                     bucketColorViewer[i].color = emptyColor;
-                                    bucketViewers[i].text = "EMPTY";
+                                    bucketViewers[i].text = $"I:{i} EMPTY";
                                 }
                                 break;
                             case OpenAddressingMode.doubleHash:
                                 if (i < openHashTableDoubleHash.buckets.Count)
                                 {
-                                    if (openHashTableDoubleHash.buckets[i].Value == null || openHashTableDoubleHash.deleted[i])
+                                    if (openHashTableDoubleHash.deleted[i])
+                                    {
+                                        bucketColorViewer[i].color = tombStoneColor;
+                                        bucketViewers[i].text = $"I:{i} EMPTY with Tombstone";
+                                    }
+                                    else if (openHashTableDoubleHash.buckets[i].Value == null)
                                     {
                                         bucketColorViewer[i].color = emptyColor;
-                                        bucketViewers[i].text = "EMPTY";
+                                        bucketViewers[i].text = $"I:{i} EMPTY";
                                     }
                                     else
                                     {
@@ -347,7 +362,7 @@ public class HashtableViewer : MonoBehaviour
                                 else
                                 {
                                     bucketColorViewer[i].color = emptyColor;
-                                    bucketViewers[i].text = "EMPTY";
+                                    bucketViewers[i].text = $"I:{i} EMPTY";
                                 }
                                 break;
                         }
@@ -358,7 +373,7 @@ public class HashtableViewer : MonoBehaviour
                             if (chainingHashtable.buckets[i] == null)
                             {
                                 bucketColorViewer[i].color = emptyColor;
-                                bucketViewers[i].text = "EMPTY";
+                                bucketViewers[i].text = $"I:{i} EMPTY";
                             }
                             else
                             {
@@ -381,7 +396,7 @@ public class HashtableViewer : MonoBehaviour
                         else
                         {
                             bucketColorViewer[i].color = emptyColor;
-                            bucketViewers[i].text = "EMPTY";
+                            bucketViewers[i].text = $"I:{i} EMPTY";
                         }
                         break;
                 }
@@ -413,48 +428,45 @@ public class HashtableViewer : MonoBehaviour
 
     public void OnRemove()
     {
-        if (selectedIndex == -1)
-            return;
 
-        switch (hashTableMode)
+        if (int.TryParse(keyInput.text, out int key))
         {
-            case HashtableMode.simple:
-                var key = simpleHashtable.buckets[selectedIndex].Key;
-                simpleHashtable.Remove(key);
-                break;
-            case HashtableMode.chaining:
-                var keys = new List<int>();
-                var node = chainingHashtable.buckets[selectedIndex].First;
-
-                while(node != null)
+            try
+            {
+                switch (hashTableMode)
                 {
-                    keys.Add(node.Value.Key);
-                    node = node.Next;
-                }
-
-                foreach(var chainedKey in keys)
-                {
-                    chainingHashtable.Remove(chainedKey);
-                }
-                break;
-            case HashtableMode.openAddressing:
-                key = -1;
-                switch (openAddressingMode)
-                {
-                    case OpenAddressingMode.linear:
-                        key = openHashTableLinear.buckets[selectedIndex].Key;
-                        openHashTableLinear.Remove(key);
+                    case HashtableMode.simple:
+                        simpleHashtable.Remove(key);
                         break;
-                    case OpenAddressingMode.quadratic:
-                        key = openHashTableQuadratic.buckets[selectedIndex].Key;
-                        openHashTableQuadratic.Remove(key);
+                    case HashtableMode.chaining:
+                        chainingHashtable.Remove(key);
                         break;
-                    case OpenAddressingMode.doubleHash:
-                        key = openHashTableDoubleHash.buckets[selectedIndex].Key;
-                        openHashTableDoubleHash.Remove(key);
+                    case HashtableMode.openAddressing:
+                        switch (openAddressingMode)
+                        {
+                            case OpenAddressingMode.linear:
+                                openHashTableLinear.Remove(key);
+                                break;
+                            case OpenAddressingMode.quadratic:
+                                openHashTableQuadratic.Remove(key);
+                                break;
+                            case OpenAddressingMode.doubleHash:
+                                openHashTableDoubleHash.Remove(key);
+                                break;
+                        }
                         break;
                 }
-                break;
+                logText.text += $"\n{key}: Removed Successfully";
+            }
+            catch (Exception e)
+            {
+                logText.text += "\n"+e.Message;
+                Debug.LogException(e);
+            }
+        }
+        else
+        {
+            logText.text += "\n키 형식이 올바르지 않습니다(INT)";
         }
 
         UpdateUi();

@@ -1260,7 +1260,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.4481132, b: 0.4481132, a: 0.392}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3333,8 +3333,11 @@ MonoBehaviour:
   bucketUiPrefab: {fileID: 2328806811863894345, guid: 07ccbdf0bad87eb4c96f95bd49c10a9e, type: 3}
   emptyColor: {r: 1, g: 1, b: 1, a: 1}
   fullColor: {r: 0, g: 1, b: 0, a: 1}
+  tombStoneColor: {r: 1, g: 0, b: 0, a: 1}
   viewerFormat: '{0} : {1}'
   chainSeperator: ->
+  resizeLogFormat: "\\n\uB9AC\uC0AC\uC774\uC988 \uAC10\uC9C0 {0}->{1}"
+  probeLogFormat: "\\n\uD504\uB85C\uBE59 \uAC10\uC9C0 {0}->{1}"
 --- !u!1 &1082356690
 GameObject:
   m_ObjectHideFlags: 0
