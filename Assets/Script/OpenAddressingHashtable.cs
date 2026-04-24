@@ -1,7 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using UnityEngine;
-using System;
 
 public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
 {
@@ -33,12 +34,14 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
     }
     private int GetIndex(TKey key)
     {
-        return Mathf.Abs(key.GetHashCode() % capacity);
+        int hash = key.GetHashCode();
+        return (hash & 0x7fffffff) % capacity;
     }
 
     private int GetIndex2(TKey key)
     {
-        return 1 + Mathf.Abs(key.GetHashCode() % (capacity - 1));
+        int hash = key.GetHashCode();
+        return 1 + ((hash & 0x7fffffff) % (capacity - 1));
     }
     private int Probe(TKey key, int i)
     {
