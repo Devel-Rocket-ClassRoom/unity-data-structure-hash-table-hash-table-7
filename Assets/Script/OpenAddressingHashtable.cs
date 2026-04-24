@@ -13,7 +13,7 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
     private float loadFactor = 0.6f;
     private HashtableViewer.OpenAddressingMode mode;
 
-    public OpenAddressingHashtable(int capacity = 16, HashtableViewer.OpenAddressingMode mode)
+    public OpenAddressingHashtable(HashtableViewer.OpenAddressingMode mode, int capacity = 16)
     {
         this.capacity = capacity;
         this.mode = mode;
@@ -35,7 +35,7 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
 
     private int GetIndex2(TKey key)
     {
-        return Mathf.Abs(key.GetHashCode() % (capacity - 1));
+        return 1 + Mathf.Abs(key.GetHashCode() % (capacity - 1));
     }
     private int Probe(TKey key, int i)
     {
@@ -44,13 +44,10 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
         {
             case HashtableViewer.OpenAddressingMode.linear:
                 return (hash + i) % capacity;
-                break;
             case HashtableViewer.OpenAddressingMode.quadratic:
                 return (hash + i * i) % capacity;
-                break;
             case HashtableViewer.OpenAddressingMode.doubleHash:
-                return (hash + i * GetIndex2(key) % capacity);
-                break;
+                return (hash + i * GetIndex2(key)) % capacity;
         }
         return hash;
     }
@@ -89,15 +86,54 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
         occupied = tempOccupied;
         deleted = tempDeleted;
     }
-    public TValue this[TKey key] { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+    public TValue this[TKey key]
+    {
+        get
+        {
+            if (TryGetValue(key, out var value))
+            {
+                return value;
+            }
+            throw new KeyNotFoundException();
+        }
+        set => Add(key, value);
+    }
 
-    public ICollection<TKey> Keys => throw new System.NotImplementedException();
+    public ICollection<TKey> Keys
+    {
+        get
+        {
+            var list = new List<TKey>();
+            for (int i = 0; i < capacity; i++)
+            {
+                if (occupied[i] && !deleted[i])
+                {
+                    list.Add(buckets[i].Key);
+                }
+            }
+            return list;
+        }
+    }
 
-    public ICollection<TValue> Values => throw new System.NotImplementedException();
+    public ICollection<TValue> Values
+    {
+        get
+        {
+            var list = new List<TValue>();
+            for (int i = 0; i < capacity; i++)
+            {
+                if (occupied[i] && !deleted[i])
+                {
+                    list.Add(buckets[i].Value);
+                }
+            }
+            return list;
+        }
+    }
 
-    public int Count => throw new System.NotImplementedException();
+    public int Count => count;
 
-    public bool IsReadOnly => throw new System.NotImplementedException();
+    public bool IsReadOnly => false;
 
     public void Add(TKey key, TValue value)
     {
@@ -130,42 +166,86 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
 
     public void Clear()
     {
-        throw new System.NotImplementedException();
+        for(int i = 0; i < capacity; i++)
+        {
+            buckets[i] = default;
+            occupied[i] = false;
+            deleted[i] = false;
+        }
+        count = 0;
     }
 
     public bool Contains(KeyValuePair<TKey, TValue> item)
     {
-        throw new System.NotImplementedException();
+        return ContainsKey(item.Key);
     }
 
     public bool ContainsKey(TKey key)
     {
-        throw new System.NotImplementedException();
+        return TryGetValue(key, out _);
     }
 
     public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
     {
-        throw new System.NotImplementedException();
+        foreach(var kvp in this)
+        {
+            array[arrayIndex++] = kvp;
+        }
     }
 
     public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
     {
-        throw new System.NotImplementedException();
+        for (int i = 0; i < capacity; i++)
+        {
+            if (occupied[i] && !deleted[i])
+            {
+                yield return buckets[i];
+            }
+        }
     }
 
     public bool Remove(TKey key)
     {
-        throw new System.NotImplementedException();
+        for (int i = 0; i < capacity; i++)
+        {
+            int index = Probe(key, i);
+            if (!occupied[index])
+            {
+                break;
+            }
+            if (!deleted[index] && buckets[index].Key.Equals(key))
+            {
+                deleted[index] = true;
+                count--;
+                return true;
+            }
+        }
+        return false;
     }
 
     public bool Remove(KeyValuePair<TKey, TValue> item)
     {
-        throw new System.NotImplementedException();
+        return Remove(item.Key);
     }
 
     public bool TryGetValue(TKey key, out TValue value)
     {
-        throw new System.NotImplementedException();
+        for (int i = 0; i < capacity; i++)
+        {
+            int index = Probe(key, i);
+            if (!occupied[index])
+            {
+                break;
+            }
+            if (!deleted[index] && buckets[index].Key.Equals(key))
+            {
+                value = buckets[index].Value;
+                return true;
+            }
+
+        }
+        value = default;
+        return false;
     }
 
     IEnumerator IEnumerable.GetEnumerator()
