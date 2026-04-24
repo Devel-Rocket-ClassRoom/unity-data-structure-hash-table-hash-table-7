@@ -10,7 +10,7 @@ public class ChainingHashTable<TKey, TValue> : IDictionary<TKey, TValue>
 {
     public List<LinkedList<KeyValuePair<TKey, TValue>>> buckets;
     private int count;
-    private int capacity;
+    public int capacity;
     private float loadFactor = 0.75f;
 
     public ChainingHashTable(int capacity = 16)

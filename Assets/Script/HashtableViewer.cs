@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.LowLevelPhysics2D;
 using UnityEngine.UI;
 
 public class HashtableViewer : MonoBehaviour
@@ -53,12 +53,12 @@ public class HashtableViewer : MonoBehaviour
 
     SimpleHashTable<int, string> simpleHashtable = new();
     ChainingHashTable<int, string> chainingHashtable = new();
-    int selectedIndex = -1;
 
-    #region DUMMY
-    static public int bucketSize = 15;
-    List<KeyValuePair<int, string>> data = new(bucketSize);
-    #endregion
+    OpenAddressingHashtable<int, string> openHashTableLinear = new(OpenAddressingMode.linear);
+    OpenAddressingHashtable<int, string> openHashTableQuadratic = new(OpenAddressingMode.quadratic);
+    OpenAddressingHashtable<int, string> openHashTableDoubleHash = new(OpenAddressingMode.doubleHash);
+
+    int selectedIndex = -1;
 
 
     private void Start()
@@ -128,9 +128,27 @@ public class HashtableViewer : MonoBehaviour
                 }
                 break;
             case HashtableMode.openAddressing:
-                #region DUMMY
-                data[key % bucketSize] = new KeyValuePair<int, string>(key, value);
-                #endregion
+                try
+                {
+                    switch (openAddressingMode)
+                    {
+                        case OpenAddressingMode.linear:
+                            openHashTableLinear.Add(key, value);
+                            break;
+                        case OpenAddressingMode.quadratic:
+                            openHashTableQuadratic.Add(key, value);
+                            break;
+                        case OpenAddressingMode.doubleHash:
+                            openHashTableDoubleHash.Add(key, value);
+                            break;
+                    }
+                    logText.text += $"\n{key}:{value} Added Successfully";
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    logText.text += $"\n{e.Message}";
+                }
                 break;
         }
 
@@ -140,33 +158,40 @@ public class HashtableViewer : MonoBehaviour
 
     public void OnClear()
     {
-        #region DUMMY
-        data.Clear();
-
-        for (int i = 0; i < bucketSize; i++)
-        {
-            data.Add(new KeyValuePair<int, string>(0, null));
-        }
-        #endregion
         simpleHashtable.Clear();
         chainingHashtable.Clear();
+        openHashTableLinear.Clear();
+        openHashTableQuadratic.Clear();
+        openHashTableDoubleHash.Clear();
 
-        logText.text += $"\nCleared";
+        logText.text = $"Cleared";
         UpdateUi();
     }
 
     public void UpdateUi()
     {
+        int bucketSize = 0;
         switch (hashTableMode)
         {
             case HashtableMode.simple:
                 bucketSize = simpleHashtable.capacity;
                 break;
             case HashtableMode.chaining:
-                bucketSize = 15;
+                bucketSize = chainingHashtable.capacity;
                 break;
             case HashtableMode.openAddressing:
-                bucketSize = 15;
+                switch (openAddressingMode)
+                {
+                    case OpenAddressingMode.linear:
+                        bucketSize = openHashTableLinear.capacity;
+                        break;
+                    case OpenAddressingMode.quadratic:
+                        bucketSize = openHashTableQuadratic.capacity;
+                        break;
+                    case OpenAddressingMode.doubleHash:
+                        bucketSize = openHashTableDoubleHash.capacity;
+                        break;
+                }
                 break;
         }
 
@@ -174,7 +199,7 @@ public class HashtableViewer : MonoBehaviour
         {
             GameObject newViewer = GameObject.Instantiate(bucketUiPrefab, bucketScrollRect.content);
             Image colorViewer = newViewer.GetComponent<Image>();
-            TextMeshProUGUI text = newViewer.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
+            TextMeshProUGUI text = newViewer.transform.GetChild(0).GetComponent<ScrollRect>().content.GetChild(0).GetComponent<TextMeshProUGUI>();
             bucketColorViewer.Add(colorViewer);
             bucketViewers.Add(text);
 
@@ -204,12 +229,12 @@ public class HashtableViewer : MonoBehaviour
                             if (simpleHashtable.buckets[i].Value == null)
                             {
                                 bucketColorViewer[i].color = emptyColor;
-                                bucketViewers[i].text = "EMPTY";
+                                bucketViewers[i].text = $"I:{i} EMPTY";
                             }
                             else
                             {
                                 bucketColorViewer[i].color = fullColor;
-                                bucketViewers[i].text = simpleHashtable.buckets[i].Value;
+                                bucketViewers[i].text = $"I:{i} {string.Format(viewerFormat,simpleHashtable.buckets[i].Key, simpleHashtable.buckets[i].Value)}";
                             }
                         }
                         else
@@ -220,15 +245,68 @@ public class HashtableViewer : MonoBehaviour
                         break;
 
                     case HashtableMode.openAddressing:
-                        if (data[i].Value == null)
+                        switch (openAddressingMode)
                         {
-                            bucketColorViewer[i].color = emptyColor;
-                            bucketViewers[i].text = "EMPTY";
-                        }
-                        else
-                        {
-                            bucketColorViewer[i].color = fullColor;
-                            bucketViewers[i].text = data[i].Value;
+                            case OpenAddressingMode.linear:
+                                if (i < openHashTableLinear.buckets.Count)
+                                {
+                                    if(openHashTableLinear.buckets[i].Value == null || openHashTableLinear.deleted[i])
+                                    {
+                                        bucketColorViewer[i].color = emptyColor;
+                                        bucketViewers[i].text = "EMPTY";
+                                    }
+                                    else
+                                    {
+                                        bucketColorViewer[i].color = fullColor;
+                                        bucketViewers[i].text = $"I:{i} {string.Format(viewerFormat, openHashTableLinear.buckets[i].Key, openHashTableLinear.buckets[i].Value)}";
+                                    }
+                                }
+                                else
+                                {
+                                    bucketColorViewer[i].color = emptyColor;
+                                    bucketViewers[i].text = "EMPTY";
+                                }
+                                break;
+                            case OpenAddressingMode.quadratic:
+                                if (i < openHashTableQuadratic.buckets.Count)
+                                {
+                                    if (openHashTableQuadratic.buckets[i].Value == null || openHashTableQuadratic.deleted[i])
+                                    {
+                                        bucketColorViewer[i].color = emptyColor;
+                                        bucketViewers[i].text = "EMPTY";
+                                    }
+                                    else
+                                    {
+                                        bucketColorViewer[i].color = fullColor;
+                                        bucketViewers[i].text = $"I:{i} {string.Format(viewerFormat, openHashTableQuadratic.buckets[i].Key, openHashTableQuadratic.buckets[i].Value)}";
+                                    }
+                                }
+                                else
+                                {
+                                    bucketColorViewer[i].color = emptyColor;
+                                    bucketViewers[i].text = "EMPTY";
+                                }
+                                break;
+                            case OpenAddressingMode.doubleHash:
+                                if (i < openHashTableDoubleHash.buckets.Count)
+                                {
+                                    if (openHashTableDoubleHash.buckets[i].Value == null || openHashTableDoubleHash.deleted[i])
+                                    {
+                                        bucketColorViewer[i].color = emptyColor;
+                                        bucketViewers[i].text = "EMPTY";
+                                    }
+                                    else
+                                    {
+                                        bucketColorViewer[i].color = fullColor;
+                                        bucketViewers[i].text = $"I:{i} {string.Format(viewerFormat, openHashTableDoubleHash.buckets[i].Key, openHashTableDoubleHash.buckets[i].Value)}";
+                                    }
+                                }
+                                else
+                                {
+                                    bucketColorViewer[i].color = emptyColor;
+                                    bucketViewers[i].text = "EMPTY";
+                                }
+                                break;
                         }
                         break;
                     case HashtableMode.chaining:
@@ -244,13 +322,14 @@ public class HashtableViewer : MonoBehaviour
                                 var node = chainingHashtable.buckets[i].First;
 
                                 StringBuilder resultBuilder = new StringBuilder();
+                                resultBuilder.Append($"I:{i} ");
                                 while (node != null)
                                 {
                                     resultBuilder.Append(string.Format(viewerFormat, node.Value.Key, node.Value.Value));
                                     resultBuilder.Append(chainSeperator);
                                     node = node.Next;
                                 }
-                                resultBuilder.Remove(resultBuilder.Length - 1, 1);
+                                resultBuilder.Remove(resultBuilder.Length - chainSeperator.Length, chainSeperator.Length);
 
                                 bucketColorViewer[i].color = fullColor;
                                 bucketViewers[i].text = resultBuilder.ToString();
@@ -301,8 +380,37 @@ public class HashtableViewer : MonoBehaviour
                 simpleHashtable.Remove(key);
                 break;
             case HashtableMode.chaining:
+                var keys = new List<int>();
+                var node = chainingHashtable.buckets[selectedIndex].First;
+
+                while(node != null)
+                {
+                    keys.Add(node.Value.Key);
+                    node = node.Next;
+                }
+
+                foreach(var chainedKey in keys)
+                {
+                    chainingHashtable.Remove(chainedKey);
+                }
                 break;
             case HashtableMode.openAddressing:
+                key = -1;
+                switch (openAddressingMode)
+                {
+                    case OpenAddressingMode.linear:
+                        key = openHashTableLinear.buckets[selectedIndex].Key;
+                        openHashTableLinear.Remove(key);
+                        break;
+                    case OpenAddressingMode.quadratic:
+                        key = openHashTableQuadratic.buckets[selectedIndex].Key;
+                        openHashTableQuadratic.Remove(key);
+                        break;
+                    case OpenAddressingMode.doubleHash:
+                        key = openHashTableDoubleHash.buckets[selectedIndex].Key;
+                        openHashTableDoubleHash.Remove(key);
+                        break;
+                }
                 break;
         }
 
