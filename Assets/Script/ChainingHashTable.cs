@@ -13,6 +13,8 @@ public class ChainingHashTable<TKey, TValue> : IDictionary<TKey, TValue>
     public int capacity;
     private float loadFactor = 0.75f;
 
+    public event Action<int, int> OnResize;
+
     public ChainingHashTable(int capacity = 16)
     {
         this.capacity = capacity;
@@ -50,6 +52,8 @@ public class ChainingHashTable<TKey, TValue> : IDictionary<TKey, TValue>
             }
         }
         buckets = tempBuckets;
+
+        OnResize?.Invoke(oldCapacity, capacity);
     }
 
     private int GetIndex(TKey key)

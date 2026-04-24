@@ -41,6 +41,8 @@ public class HashtableViewer : MonoBehaviour
     public string viewerFormat = "{0} : {1}";
     public string chainSeperator = "->";
 
+    public string resizeLogFormat = "\n리사이즈 감지 {0}->{1}";
+    public string probeLogFormat = "\n프로빙 감지 {0}->{1}";
 
 
 
@@ -65,6 +67,44 @@ public class HashtableViewer : MonoBehaviour
     {
         OnClear();
     }
+
+    private void OnEnable()
+    {
+        simpleHashtable.OnResize += OnResize;
+        chainingHashtable.OnResize += OnResize;
+        openHashTableLinear.OnResize += OnResize;
+        openHashTableQuadratic.OnResize += OnResize;
+        openHashTableDoubleHash.OnResize += OnResize;
+
+        openHashTableLinear.OnProbe += OnProbe;
+        openHashTableQuadratic.OnProbe += OnProbe;
+        openHashTableDoubleHash.OnProbe += OnProbe;
+    }
+
+    private void OnDisable()
+    {
+        simpleHashtable.OnResize -= OnResize;
+        chainingHashtable.OnResize -= OnResize;
+        openHashTableLinear.OnResize -= OnResize;
+        openHashTableQuadratic.OnResize -= OnResize;
+        openHashTableDoubleHash.OnResize -= OnResize;
+
+        openHashTableLinear.OnProbe -= OnProbe;
+        openHashTableQuadratic.OnProbe -= OnProbe;
+        openHashTableDoubleHash.OnProbe -= OnProbe;
+    }
+
+    private void OnResize(int oldSize, int newSize)
+    {
+        logText.text += string.Format(resizeLogFormat, oldSize.ToString(), newSize.ToString());
+    }
+
+    private void OnProbe(int oldIndex, int newIndex)
+    {
+        logText.text += string.Format(probeLogFormat, oldIndex.ToString(), newIndex.ToString());
+    }
+
+
     public void OnOptionChanged()
     {
         hashTableMode = (HashtableMode)typeDropdown.value;
@@ -199,9 +239,12 @@ public class HashtableViewer : MonoBehaviour
         {
             GameObject newViewer = GameObject.Instantiate(bucketUiPrefab, bucketScrollRect.content);
             Image colorViewer = newViewer.GetComponent<Image>();
-            TextMeshProUGUI text = newViewer.transform.GetChild(0).GetComponent<ScrollRect>().content.GetChild(0).GetComponent<TextMeshProUGUI>();
+            DragPassingScrollRect rect = newViewer.transform.GetChild(0).GetComponent<DragPassingScrollRect>();
+            TextMeshProUGUI text = rect.content.GetChild(0).GetComponent<TextMeshProUGUI>();
+
             bucketColorViewer.Add(colorViewer);
             bucketViewers.Add(text);
+            rect.parentScroll = bucketScrollRect;
 
             Button btn = newViewer.GetComponent<Button>();
             int index = i;

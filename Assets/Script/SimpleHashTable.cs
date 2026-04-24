@@ -11,6 +11,9 @@ public class SimpleHashTable<TKey, TValue> : IDictionary<TKey, TValue>
     private int count;
     public int capacity;
     private float loadFactor = 0.75f;
+
+    public event Action<int, int> OnResize;
+
     public SimpleHashTable(int capacity = 16)
     {
         this.capacity = capacity;
@@ -51,6 +54,8 @@ public class SimpleHashTable<TKey, TValue> : IDictionary<TKey, TValue>
         }
         buckets = tempBuckets;
         occupied = tempOccupied;
+
+        OnResize?.Invoke(oldCapacity, capacity);
     }
 
 

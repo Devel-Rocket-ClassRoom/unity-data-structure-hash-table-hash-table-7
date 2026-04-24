@@ -13,6 +13,9 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
     private float loadFactor = 0.6f;
     private HashtableViewer.OpenAddressingMode mode;
 
+    public event Action<int, int> OnProbe;
+    public event Action<int, int> OnResize;
+
     public OpenAddressingHashtable(HashtableViewer.OpenAddressingMode mode, int capacity = 16)
     {
         this.capacity = capacity;
@@ -85,6 +88,8 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
         buckets = tempBuckets;
         occupied = tempOccupied;
         deleted = tempDeleted;
+
+        OnResize?.Invoke(oldCapacity, capacity);
     }
     public TValue this[TKey key]
     {
@@ -141,9 +146,20 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
         {
             Resize();
         }
+
+        bool occupiedCycle = false;
+        int oldIndex = -1;
+
         for (int i = 0; i < capacity; i++)
         {
             int index = Probe(key, i);
+
+            if (occupiedCycle)
+            {
+                OnProbe?.Invoke(oldIndex, index);
+                occupiedCycle = false;
+            }
+
             if (!occupied[index] || deleted[index])
             {
                 buckets[index] = new KeyValuePair<TKey, TValue>(key, value);
@@ -156,6 +172,9 @@ public class OpenAddressingHashtable<TKey, TValue> : IDictionary<TKey, TValue>
             {
                 throw new ArgumentException($"키가 {key} 이미 존재합니다");
             }
+
+            occupiedCycle = true;
+            oldIndex = index;
         }
     }
 
